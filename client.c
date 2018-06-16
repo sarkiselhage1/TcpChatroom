@@ -9,17 +9,16 @@
 #include <pthread.h>
 #include <signal.h>
 
-char whoCommand[] = "_who";
 char quitCommand[] = "_quit";
 
-void *receiveMessage(void *sock) {
-	int their_sock = *((int *)sock);
-	char msg[500];
-	int len;
-	while((len = recv(their_sock,msg,500,0)) > 0) {
-		msg[len] = '\0';
-		fputs(msg,stdout);
-		memset(msg,'\0',sizeof(msg));
+void *recMsg(void *sock) {
+	int length;
+	int t_sock = *((int *)sock);
+	char message[500];	
+	while((length = recv(t_sock,message,500,0)) > 0) {
+		message[length] = '\0';
+		fputs(message,stdout);
+		memset(message,'\0',sizeof(message));
 	}
     exit(1);
 }
@@ -27,20 +26,20 @@ void *receiveMessage(void *sock) {
 int connectToServer(char nom[], char machine[], char port[]) {
 	struct sockaddr_in their_addr;
 	int my_sock;
-	int their_sock;
 	int their_addr_size;
 	int portno;
 	pthread_t sendt,recvt;
-	char msg[500];
+	char message[500];
 	char username[100];
 	char res[600];
 	char ip[INET_ADDRSTRLEN];
-	int len;
+	int length;
 
 	portno = atoi(port);
 	strcpy(username, nom);
 	my_sock = socket(AF_INET,SOCK_STREAM,0);
 	memset(their_addr.sin_zero,'\0',sizeof(their_addr.sin_zero));
+
 	their_addr.sin_family = AF_INET;
 	their_addr.sin_port = htons(portno);
 	their_addr.sin_addr.s_addr = inet_addr("127.0.0.1");
@@ -51,30 +50,27 @@ int connectToServer(char nom[], char machine[], char port[]) {
 	}
 	inet_ntop(AF_INET, (struct sockaddr *)&their_addr, ip, INET_ADDRSTRLEN);
     
-    len = write(my_sock, username, strlen(username));
-    if (len < 0) {
+    length = write(my_sock, username, strlen(username));
+    if (length < 0) {
         printf("Username is not sent to the server\n");
     }
     else {
-//        printf("Username is sent to the server\n");
     }
+	pthread_create(&recvt,NULL,recMsg,&my_sock);
     
-//    printf("connected to %s, start chatting\n",ip);
-	pthread_create(&recvt,NULL,receiveMessage,&my_sock);
-    
-    memset(msg, 0x00, sizeof(msg));
+    memset(message, 0x00, sizeof(message));
     memset(res, 0x00, sizeof(res));
-	while(fgets(msg,500,stdin) > 0) {
-		strcat(res,msg);
-		len = write(my_sock,res,strlen(res));
-		if(len < 0) {
+	while(fgets(message,500,stdin) > 0) {
+		strcat(res,message);
+		length = write(my_sock,res,strlen(res));
+		if(length < 0) {
 			perror("message not sent");
 			exit(1);
 		}
-        if (strlen(msg) == strlen(quitCommand) + 1 && msg[0] == '_' && msg[1] == 'q' && msg[2] == 'u' && msg[3] == 'i' && msg[4] == 't') {
+        if (strlen(message) == strlen(quitCommand) + 1 && message[0] == '_' && message[1] == 'q' && message[2] == 'u' && message[3] == 'i' && message[4] == 't') {
             exit(1);
         }
-        memset(msg, 0x00, sizeof(msg));
+        memset(message, 0x00, sizeof(message));
         memset(res, 0x00, sizeof(res));
 	}
 	pthread_join(recvt,NULL);
@@ -87,35 +83,25 @@ int main(int argc, char**argv) {
     char nom[2000];
     char machine[2000];
     char port[2000];
-    
-    char firstSpace;
-    char secondSpace;
-    char thirdSpace;
+    char space;
         
-    printf("Welcome to talk :)\n");
-    // instruction pour le client
-    printf("Type '_connect <surnom> <machine> <port>' to connect to your server.\n");
-    printf("Type '_quit' to quit.\n");
-    //    printf("Type '_who' to request the list of users from the server.\n");
+    printf("Welcome guys to ChatRoom :)\n");
+    printf("Type '_connect <surnom> <machine> <port>' and connect to your server now.\n");
+    printf("Type '_quit' to disoconnect from your server.\n");
     fputs("", stdout);
     fgets(command, sizeof (command), stdin);
     
     if (command[0] == '_' && command[1] == 'q' && command[2] == 'u' && command[3] == 'i' && command[4] == 't') {
-//        printf("you enter the following command: _quit\n");
         return 0;
     }
     else {
         if (command[0] == '_' && command[1] == 'c' && command[2] == 'o' && command[3] == 'n' && command[4] == 'n' && command[5] == 'e' && command[6] == 'c' && command[7] == 't') {
             
-            sscanf(command, "%s%c%s%c%s%c%s", connect, &firstSpace, nom, &secondSpace, machine, &thirdSpace, port);
-//            printf("Name: %s\n", nom);
-//            printf("Machine: %s\n", machine);
-//            printf("Port: %s\n", port);
-            
+            sscanf(command, "%s%c%s%c%s%c%s", connect, &space, nom, &space, machine, &space, port);          
             connectToServer(nom, machine, port);
         }
         else {
-            printf("We are not here to play looser, BYE !!!\n");
+            printf("GoodBye.\n");
             return 0;
         }
     }
